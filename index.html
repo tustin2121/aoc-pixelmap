@@ -1,0 +1,97 @@
+<html>
+<head>
+	<link rel="stylesheet" href="leaflet.css" type="text/css" />
+	<script type="text/javascript" src="leaflet.js"></script>
+	<script type="text/javascript" src="leaflet.tilelayer.fallback.js"></script>
+	<script type="text/javascript" src="data/locations.js"></script>
+	<style type="text/css">
+body { margin:0; }
+#mapPane { height:100%; }
+	</style>
+</head>
+<body>
+	<div id="mapPane"></div>
+	<script type="text/javascript">
+		/*global L, towns, routes, areas, pois */
+		function makeLatLong(x, z) {
+			return [-z, x];
+		}
+		
+		var baseLayers = [
+			L.tileLayer('data/DIM0/{z}/{type}/{x},{y}.png', {
+				attribution: 'Overworld map',
+				type: 'day',
+				tileSize: 512,
+				maxNativeZoom: 0,
+				minNativeZoom: 0,
+			}),
+			L.tileLayer('data/DIM0/{z}/{type}/{x},{y}.png', {
+				attribution: 'Overworld map',
+				type: 'night',
+				tileSize: 512,
+				maxNativeZoom: 0,
+				minNativeZoom: 0,
+			}),
+			L.tileLayer('data/DIM0/{z}/{type}/{x},{y}.png', {
+				attribution: 'Overworld map',
+				type: 'topo',
+				tileSize: 512,
+				maxNativeZoom: 0,
+				minNativeZoom: 0,
+			}),
+		];
+		var overLayers = [
+			L.layerGroup(towns.map(function(loc){
+				return L.circle(
+					makeLatLong(loc.x, loc.z), 
+					Object.assign({ radius:loc.rad }, loc.opts||{}))
+					.bindPopup(loc.name);
+			})),
+			L.layerGroup(routes.map(function(loc){
+				var points = loc.path.map(function(x){ return makeLatLong(x[0], x[1])});
+				return L.polyline(
+					points,
+					Object.assign({ weight:7, opacity:0.7 }, loc.opts||{}))
+					.bindPopup(loc.name);
+			})),
+			L.layerGroup(areas.map(function(loc){
+				var points = loc.boundery.map(function(x){ return makeLatLong(x[0], x[1])});
+				return L.polygon(
+					points,
+					loc.opts||{})
+					.bindPopup(loc.name);
+			})),
+			L.layerGroup(pois.map(function(loc){
+				return L.marker(
+					makeLatLong(loc.x, loc.z), 
+					loc.opts||{})
+					.bindPopup(loc.name);
+			})),
+		];
+		
+		var MAP = L.map('mapPane', {
+			zoomSnap: 0.1, //disable snapping to whole zoom levels
+			zoomDelta: 0.5,
+			crs: L.CRS.Simple,
+			center: makeLatLong(towns[0].x, towns[0].z), //Lat/Long => -Y/X
+			zoom: 0,
+			minZoom: 0, //CAN go negative, according to the tutorial, but it seems to break if it does
+			maxZoom: 2,
+			layers: [baseLayers[0], ...overLayers],
+		});
+		L.control.layers({
+			"Day View": baseLayers[0],
+			"Night View": baseLayers[1],
+			"Topographical": baseLayers[2],
+		}, {
+			"Towns": overLayers[0],
+			"Routes": overLayers[1],
+			"Areas": overLayers[2],
+			"Points of Interest": overLayers[3],
+		}).addTo(MAP);
+		MAP.on('contextmenu', function (e){
+			MAP.openPopup("X:"+Math.floor(e.latlng.lng)+" Z:"+Math.floor(-e.latlng.lat), e.latlng);
+		});
+	</script>
+</body>
+</html>
