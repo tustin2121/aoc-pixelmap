@@ -3,7 +3,7 @@
 	<link rel="stylesheet" href="leaflet.css" type="text/css" />
 	<script type="text/javascript" src="leaflet.js"></script>
 	<script type="text/javascript" src="leaflet.tilelayer.fallback.js"></script>
-	<script type="text/javascript" src="data/locations.js"></script>
+	<script type="text/javascript" src="data/config.js"></script>
 	<style type="text/css">
 body { margin:0; }
 #mapPane { height:100%; }
@@ -12,86 +12,105 @@ body { margin:0; }
 <body>
 	<div id="mapPane"></div>
 	<script type="text/javascript">
-		/*global L, towns, routes, areas, pois */
+		/*global L, mapConfig */
+		
 		function makeLatLong(x, z) {
+			//Lat/Long => -Y/X
+			if (z === undefined) {
+				if (Array.isArray(x)) return [-x[1], x[0]];
+				if (typeof x === 'object') return [-x.z, x.x];
+			}
 			return [-z, x];
 		}
-		
-		var baseLayers = [
-			L.tileLayer('data/DIM0/{z}/{type}/{x},{y}.png', {
-				attribution: 'Overworld map',
-				type: 'day',
-				tileSize: 512,
-				maxNativeZoom: 0,
-				minNativeZoom: 0,
-			}),
-			L.tileLayer('data/DIM0/{z}/{type}/{x},{y}.png', {
-				attribution: 'Overworld map',
-				type: 'night',
-				tileSize: 512,
-				maxNativeZoom: 0,
-				minNativeZoom: 0,
-			}),
-			L.tileLayer('data/DIM0/{z}/{type}/{x},{y}.png', {
-				attribution: 'Overworld map',
-				type: 'topo',
-				tileSize: 512,
-				maxNativeZoom: 0,
-				minNativeZoom: 0,
-			}),
-		];
-		var overLayers = [
-			L.layerGroup(towns.map(function(loc){
+		let mapData = {};
+		const overlayConverters = {
+			towns: (data)=> L.layerGroup(data.map((loc)=>{
 				return L.circle(
-					makeLatLong(loc.x, loc.z), 
+					makeLatLong(loc), 
 					Object.assign({ radius:loc.rad }, loc.opts||{}))
 					.bindPopup(loc.name);
 			})),
-			L.layerGroup(routes.map(function(loc){
-				var points = loc.path.map(function(x){ return makeLatLong(x[0], x[1])});
+			routes: (data)=> L.layerGroup(data.map((loc)=>{
+				var points = loc.path.map((x)=>makeLatLong(x));
 				return L.polyline(
 					points,
 					Object.assign({ weight:7, opacity:0.7 }, loc.opts||{}))
 					.bindPopup(loc.name);
 			})),
-			L.layerGroup(areas.map(function(loc){
-				var points = loc.boundery.map(function(x){ return makeLatLong(x[0], x[1])});
+			areas: (data)=> L.layerGroup(data.map((loc)=>{
+				var points = loc.boundery.map((x)=>makeLatLong(x));
 				return L.polygon(
 					points,
 					loc.opts||{})
 					.bindPopup(loc.name);
 			})),
-			L.layerGroup(pois.map(function(loc){
+			pois: (data)=> L.layerGroup(data.map((loc)=>{
 				return L.marker(
-					makeLatLong(loc.x, loc.z), 
+					makeLatLong(loc), 
 					loc.opts||{})
 					.bindPopup(loc.name);
 			})),
-		];
+		};
 		
-		var MAP = L.map('mapPane', {
+		////////////////////////////////////////////////////////////////////////////////////////////
+		
+		for (let dim in mapConfig.dimensions) {
+			let dimData = mapConfig.dimensions[dim];
+			let md = mapData[dim] = {
+				baseLayers: [],
+				overLayers: [],
+				controls: L.control.layers(),
+				center: dimData.center,
+			};
+			for (let layer of dimData.layers) {
+				let l = L.tileLayer('data/'+dim+'/{type}/{x},{y}.png', {
+					attribution: dimData.name,
+					type: layer,
+					tileSize: 512,
+					maxNativeZoom: 0,
+					minNativeZoom: 0,
+				});
+				md.baseLayers.push(l);
+				md.controls.addBaseLayer(l, mapConfig.layerLabels[layer]);
+			}
+			for (let key in dimData) {
+				let cfn = overlayConverters[key];
+				if (typeof cfn !== 'function') continue;
+				let l = cfn(dimData[key]);
+				md.overLayers.push(l);
+				md.controls.addOverlay(l, mapConfig.layerLabels[key]);
+			}
+		}
+		const MAP = L.map('mapPane', {
 			zoomSnap: 0.1, //disable snapping to whole zoom levels
 			zoomDelta: 0.5,
 			crs: L.CRS.Simple,
-			center: makeLatLong(towns[0].x, towns[0].z), //Lat/Long => -Y/X
+			center: [0,0], 
 			zoom: 0,
 			minZoom: 0, //CAN go negative, according to the tutorial, but it seems to break if it does
 			maxZoom: 2,
-			layers: [baseLayers[0], ...overLayers],
+			// layers: [DEFMAP.baseLayers[0], ...DEFMAP.overLayers],
 		});
-		L.control.layers({
-			"Day View": baseLayers[0],
-			"Night View": baseLayers[1],
-			"Topographical": baseLayers[2],
-		}, {
-			"Towns": overLayers[0],
-			"Routes": overLayers[1],
-			"Areas": overLayers[2],
-			"Points of Interest": overLayers[3],
-		}).addTo(MAP);
-		MAP.on('contextmenu', function (e){
-			MAP.openPopup("X:"+Math.floor(e.latlng.lng)+" Z:"+Math.floor(-e.latlng.lat), e.latlng);
+		let currentDim = null;
+		
+		function switchToDimension(dimId) {
+			if (currentDim) {
+				MAP.removeControl(currentDim.controls);
+				currentDim.baseLayers.forEach(x=>MAP.removeLayers(x));
+				currentDim.overLayers.forEach(x=>MAP.removeLayers(x));
+			}
+			currentDim = mapData[dimId];
+			MAP.addLayer(currentDim.baseLayers[0]);
+			currentDim.overLayers.forEach(x=>MAP.addLayer(x));
+			MAP.addControl(currentDim.controls);
+			MAP.setView(makeLatLong(currentDim.center), 0);
+		}
+		
+		MAP.on('contextmenu', (e)=>{
+			MAP.openTooltip("X:"+Math.floor(e.latlng.lng)+" Z:"+Math.floor(-e.latlng.lat), e.latlng);
 		});
+		switchToDimension("DIM0");
+		
 	</script>
 </body>
 </html>
