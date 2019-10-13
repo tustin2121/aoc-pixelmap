@@ -1,0 +1,15 @@
+{
+  "name": "updatemap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "tustin2121",
+  "license": "ISC",
+  "dependencies": {
+    "canvas": "^2.6.0",
+    "json5": "^2.1.1"
+  }
+}
