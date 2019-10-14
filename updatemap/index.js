@@ -151,6 +151,7 @@ async function updateConfig() {
 				type: waypoint.type === 'Normal'? 'poi' : waypoint.type,
 				name: waypoint.name,
 				x: waypoint.x,
+				y: waypoint.y,
 				z: waypoint.z,
 			};
 			dim.markers.push(marker);
@@ -171,37 +172,61 @@ async function updateConfig() {
  * @param {object} obj 
  * @param {string} tab 
  */
-function printJSON(obj, tab='\t') {
+function printJSON(obj, level=0, forceInline=false) {
+	let nl = (shouldNewLine()) ? '\n' : '';
+	let tab = nl ? '\t'.repeat(level+1) : '';
+	
 	if (obj === null) {
 		return "null";
 	} else if (Array.isArray(obj)) {
-		let nl = (obj.length > 7) ? '\n' : '';
+		if (obj.length === 0) return '[]';
+		
 		let out = `[${nl}`;
 		for (let val of obj) {
 			out += `${tab}${printValue(val)},${nl}`;
 		}
-		out += ']';
+		if (!nl) out = out.slice(0, -1);
+		out += `${nl?'\t'.repeat(level):''}]`;
 		return out;
 	} else if (typeof obj === 'object') {
-		let nl = (obj.length > 3) ? '\n' : '';
-		let out = `{${nl}`;
+		if (Object.keys(obj).length == 0) return '{}';
+		
+		let nl1 = nl?nl:' ';
+		let out = `{${nl1}`;
 		for (let key in obj) {
-			out += `${tab}${printKey(key)}: ${printValue(obj[key])},${nl}`;
+			out += `${tab}${printKey(key)}: ${printValue(obj[key], key)},${nl1}`;
 		}
-		out += '}';
+		if (!nl) out = out.slice(0, -2);
+		out += `${nl?'\t'.repeat(level):' '}}`;
 		return out;
 	} else {
 		return printValue(obj);
 	}
 	
-	/**
-	 * @param {string} key 
-	 */
+	function shouldNewLine() {
+		if (forceInline) return false;
+		if (level == 0) return true;
+		if (Array.isArray(obj)) {
+			if (typeof obj[0] === 'object') return true;
+			if (obj.length < 8) return false;
+		}
+		else if (typeof obj === 'object') {
+			let keys = Object.keys(obj);
+			if (typeof obj[keys[0]] === 'object') return true;
+			if (keys.length < 3) return false;
+		}
+		return true;
+	}
 	function printKey(key) {
 		if (key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/i)) return key;
 		return `"${key}"`;
 	}
-	function printValue(val) {
+	function printValue(val, key) {
+		let fi = false;
+		if (key) switch (key) {
+			case "bounds": case "layers": 
+				fi = true; break;
+		}
 		switch(typeof val) {
 			case "string": return `"${val}"`;
 			case "bigint":
@@ -210,7 +235,7 @@ function printJSON(obj, tab='\t') {
 			case "boolean": return val.toString();
 			case "function": return "null";
 			case "undefined": return "undefined";
-			case "object": return printJSON(val, tab+'\t');
+			case "object": return printJSON(val, level+1, fi);
 		}
 	}
 }
