@@ -3,7 +3,6 @@
 	<link rel="stylesheet" href="leaflet.css" type="text/css" />
 	<script type="text/javascript" src="leaflet.js"></script>
 	<script type="text/javascript" src="leaflet.tilelayer.fallback.js"></script>
-	<script type="text/javascript" src="data/config.js"></script>
 	<style type="text/css">
 body { margin:0; }
 #mapPane { height:100%; }
@@ -11,6 +10,8 @@ body { margin:0; }
 </head>
 <body>
 	<div id="mapPane"></div>
+	<script type="text/javascript"> var module = {}; </script>
+	<script type="text/javascript" src="data/config.js"></script>
 	<script type="text/javascript">
 		/*global L, mapConfig */
 		

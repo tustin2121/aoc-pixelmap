@@ -12,14 +12,14 @@ const waypointList = [];
  * Merges the images by layering them on top of one another.
  * @param {Buffer[]} srcs 
  */
-async function mergeImages(...srcs=[]) {
+async function mergeImages(...srcs) {
 	const canvas = createCanvas(512, 512);
 	const ctx = canvas.getContext('2d');
 	for (const buf of srcs) {
 		let img = await loadImage(buf);
 		ctx.drawImage(img, 0, 0);
 	}
-	return canvas.toBuffer();
+	return canvas.toBuffer("image/png");
 }
 
 /**
@@ -46,13 +46,14 @@ async function updateImages(srcRoot, dstRoot) {
 		// If we got here, we have the destination file as a buffer
 		sbuf = fs.readFileSync(spath); //if this throws, then there's worse problems.
 		// Merge the images
-		dbuf = mergeImages(dbuf, sbuf);
-		fs.writeFileSync(dpath);
+		dbuf = await mergeImages(dbuf, sbuf);
+		fs.writeFileSync(dpath, dbuf);
 		console.log("Wrote", dpath);
 	}
 }
 
 async function scanDimension(srcRoot, dstRoot) {
+	console.log(`Scanning dimension directory ${srcRoot}`);
 	const dirList = fs.readdirSync(srcRoot);
 	for (const filename of dirList) {
 		let spath = PATH.join(srcRoot, filename);
@@ -70,6 +71,7 @@ async function scanDimension(srcRoot, dstRoot) {
 }
 
 async function scanWaypoints(srcRoot) {
+	console.log(`Reading waypoints directory.`);
 	// Store the waypoints off for later processing.
 	const dirList = fs.readdirSync(srcRoot);
 	for (const filename of dirList) {
@@ -82,6 +84,8 @@ async function scanWaypoints(srcRoot) {
 }
 
 async function scanDirectory(srcRoot, dstRoot) {
+	console.log(`Scanning directory ${srcRoot}`);
+	console.log(`[Pairing with ${dstRoot}]`);
 	try {
 		let stat = fs.statSync(PATH.join(srcRoot, "DIM0"));
 		if (!stat.isDirectory()) throw new Error("DIM0 is not a directory!");
@@ -132,13 +136,16 @@ async function updateConfig() {
 	for (let waypoint of waypointList) {
 		// For every dimension they apply to, check to see if there's a marker in that dim that represents it already
 		// if there is, skip it. If there isn't, make a new marker.
-		for (let dimName of currentConfig.dimensions) {
+		for (let dimName in currentConfig.dimensions) {
 			let dim = currentConfig.dimensions[dimName];
+			let dimNum = Number.parseInt(dimName.slice(3), 10);
 			
-			if (waypoint.dimensions.contains(Number(dimName))) continue;
+			console.log(`waypoint.dimensions.includes(Number(dimName)) => `, waypoint.dimensions, dimNum, waypoint.dimensions.includes(Number(dimName)));
+			if (!waypoint.dimensions.includes(dimNum)) continue;
 			if (dim.markers.filter(x=>x.wayid === waypoint.id).length > 0) continue;
 			// If we got here, we haven't added this waypoint yet
 			
+			console.log(`Adding marker for ${waypoint.id}.`);
 			let marker = {
 				wayid: waypoint.id,
 				type: waypoint.type === 'Normal'? 'poi' : waypoint.type,
@@ -150,10 +157,62 @@ async function updateConfig() {
 		}
 	}
 	
-	let out = JSON5.stringify(currentConfig, null, '\t');
+	// let out = JSON5.stringify(currentConfig, null, '\t');
+	let out = printJSON(currentConfig);
 	
-	fs.writeFileSync(`module.exports = ${out};`, require.resolve('../data/config.js'));
+	fs.writeFileSync(require.resolve('../data/config.js'), `module.exports = ${out};`);
 	console.log('Wrote config file.');
+}
+
+////////////////////////////////////////
+
+/**
+ * 
+ * @param {object} obj 
+ * @param {string} tab 
+ */
+function printJSON(obj, tab='\t') {
+	if (obj === null) {
+		return "null";
+	} else if (Array.isArray(obj)) {
+		let nl = (obj.length > 7) ? '\n' : '';
+		let out = `[${nl}`;
+		for (let val of obj) {
+			out += `${tab}${printValue(val)},${nl}`;
+		}
+		out += ']';
+		return out;
+	} else if (typeof obj === 'object') {
+		let nl = (obj.length > 3) ? '\n' : '';
+		let out = `{${nl}`;
+		for (let key in obj) {
+			out += `${tab}${printKey(key)}: ${printValue(obj[key])},${nl}`;
+		}
+		out += '}';
+		return out;
+	} else {
+		return printValue(obj);
+	}
+	
+	/**
+	 * @param {string} key 
+	 */
+	function printKey(key) {
+		if (key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/i)) return key;
+		return `"${key}"`;
+	}
+	function printValue(val) {
+		switch(typeof val) {
+			case "string": return `"${val}"`;
+			case "bigint":
+			case "number": return val.toString(10);
+			case "symbol":
+			case "boolean": return val.toString();
+			case "function": return "null";
+			case "undefined": return "undefined";
+			case "object": return printJSON(val, tab+'\t');
+		}
+	}
 }
 
 ////////////////////////////////////////
@@ -163,7 +222,8 @@ if (process.argv.length < 3) {
 	return;
 }
 
-scanDirectory(process.argv[2], require.resolve('../data'))
+console.log(`Current config: `, currentConfig);
+scanDirectory(process.argv[2], PATH.resolve(__dirname, '../data'))
 	.then(updateConfig)
 	.then(()=> console.log('Done.'))
 	.catch((e)=>{ process.nextTick(()=>{ throw e; }) });
