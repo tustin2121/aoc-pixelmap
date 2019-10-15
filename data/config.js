@@ -9,6 +9,7 @@ module.exports = {
 		town: "Towns",
 		route: "Routes",
 		area: "Areas",
+		wormhole: "Ultra Wormholes",
 		poi: "Points of Interest",
 		"0": "Interior Slice 0",
 		"1": "Interior Slice 1",

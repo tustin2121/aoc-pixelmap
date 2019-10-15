@@ -34,10 +34,11 @@ img.leaflet-tile {
 			return [[-o.t*512, o.l*512], [-(o.b+1)*512, (o.r+1)*512]];
 		}
 		let icons = {
-			poi:    L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-thumb-tack', markerColor:'blue', shape:'circle' }),
-			house:  L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-home', markerColor:'orange', shape:'penta' }),
-			center: L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-medkit', markerColor:'red', shape:'square' }),
-			gym:    L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-dot-circle-o', markerColor:'green', shape:'star' }),
+			poi:      L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-thumb-tack', markerColor:'blue', shape:'circle' }),
+			house:    L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-home', markerColor:'orange', shape:'penta' }),
+			center:   L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-medkit', markerColor:'red', shape:'square' }),
+			gym:      L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-dot-circle-o', markerColor:'green', shape:'star' }),
+			wormhole: L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-spinner', markerColor:'black', shape:'circle' }),
 		};
 		
 		
@@ -72,10 +73,13 @@ img.leaflet-tile {
 				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
 			},
 			gym: (loc)=>{
-				let opts = Object.assign({ icon: icons.gym  }, loc.opts || {});
+				let opts = Object.assign({ icon: icons.gym }, loc.opts || {});
 				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
 			},
-			
+			wormhole: (loc)=>{
+				let opts = Object.assign({ icon: icons.wormhole }, loc.opts || {});
+				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
+			},
 		};
 		
 		////////////////////////////////////////////////////////////////////////////////////////////
