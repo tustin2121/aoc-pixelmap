@@ -2,8 +2,7 @@
 
 const fs = require('fs');
 const PATH = require('path');
-const JSON5 = require('json5');
-const { createCanvas, createImageData, loadImage } = require('canvas');
+const { createCanvas, loadImage } = require('canvas');
 
 const currentConfig = require('../data/config');
 const waypointList = [];
@@ -122,7 +121,7 @@ async function scanDirectory(srcRoot, dstRoot) {
 function newDim(name) {
 	return {
 		name, bounds: [[0,0],[0,0]], center: { x:0, z:0 },
-		layers:["day", "night", "topo", "0", "1", "2", "3", "4"],
+		layers:["day", "night", "topo", "4", "3", "2", "1", "0"],
 		markers: [
 			
 			// towns: [], gyms: [], centers: [],

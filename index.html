@@ -2,7 +2,6 @@
 <head>
 	<link rel="stylesheet" href="leaflet.css" type="text/css" />
 	<script type="text/javascript" src="leaflet.js"></script>
-	<script type="text/javascript" src="leaflet.tilelayer.fallback.js"></script>
 	<style type="text/css">
 body { margin:0; }
 #mapPane { height:100%; }
@@ -13,8 +12,8 @@ body { margin:0; }
 	<script type="text/javascript"> var module = {}; </script>
 	<script type="text/javascript" src="data/config.js"></script>
 	<script type="text/javascript">
-		/*global L, mapConfig */
-		
+		/*global L */
+				
 		function makeLatLong(x, z) {
 			//Lat/Long => -Y/X
 			if (z === undefined) {
@@ -23,34 +22,40 @@ body { margin:0; }
 			}
 			return [-z, x];
 		}
+		let mapConfig = module.exports;
 		let mapData = {};
 		const overlayConverters = {
-			towns: (data)=> L.layerGroup(data.map((loc)=>{
-				return L.circle(
-					makeLatLong(loc), 
-					Object.assign({ radius:loc.rad }, loc.opts||{}))
-					.bindPopup(loc.name);
-			})),
-			routes: (data)=> L.layerGroup(data.map((loc)=>{
+			poi: (loc) => {
+				let opts = Object.assign({}, loc.opts || {});
+				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
+			},
+			town: (loc)=>{
+				let opts = Object.assign({ radius: loc.radius || 20 }, loc.opts || {});
+				return L.circle(makeLatLong(loc), opts).bindPopup(loc.name);
+			},
+			route: (loc)=>{
+				let opts = Object.assign({ weight: 7, opacity: 0.7 }, loc.opts || {});
 				var points = loc.path.map((x)=>makeLatLong(x));
-				return L.polyline(
-					points,
-					Object.assign({ weight:7, opacity:0.7 }, loc.opts||{}))
-					.bindPopup(loc.name);
-			})),
-			areas: (data)=> L.layerGroup(data.map((loc)=>{
-				var points = loc.boundery.map((x)=>makeLatLong(x));
-				return L.polygon(
-					points,
-					loc.opts||{})
-					.bindPopup(loc.name);
-			})),
-			pois: (data)=> L.layerGroup(data.map((loc)=>{
-				return L.marker(
-					makeLatLong(loc), 
-					loc.opts||{})
-					.bindPopup(loc.name);
-			})),
+				return L.polyline(points, opts).bindPopup(loc.name);
+			},
+			area: (loc)=>{
+				let opts = Object.assign({}, loc.opts || {});
+				var points = (loc.area||loc.path).map((x)=>makeLatLong(x));
+				return L.polygon(points, opts).bindPopup(loc.name);
+			},
+			house: (loc)=>{
+				let opts = Object.assign({}, loc.opts || {});
+				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
+			},
+			center: (loc)=>{
+				let opts = Object.assign({}, loc.opts || {});
+				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
+			},
+			gym: (loc)=>{
+				let opts = Object.assign({}, loc.opts || {});
+				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
+			},
+			
 		};
 		
 		////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,8 +64,8 @@ body { margin:0; }
 			let dimData = mapConfig.dimensions[dim];
 			let md = mapData[dim] = {
 				baseLayers: [],
-				overLayers: [],
-				controls: L.control.layers(),
+				overLayers: {},
+				layerControl: L.control.layers(),
 				center: dimData.center,
 			};
 			for (let layer of dimData.layers) {
@@ -72,14 +77,23 @@ body { margin:0; }
 					minNativeZoom: 0,
 				});
 				md.baseLayers.push(l);
-				md.controls.addBaseLayer(l, mapConfig.layerLabels[layer]);
+				md.layerControl.addBaseLayer(l, mapConfig.layerLabels[layer]);
 			}
-			for (let key in dimData) {
-				let cfn = overlayConverters[key];
+			for (let marker of dimData.markers) {
+				let cfn = overlayConverters[marker.type];
 				if (typeof cfn !== 'function') continue;
-				let l = cfn(dimData[key]);
-				md.overLayers.push(l);
-				md.controls.addOverlay(l, mapConfig.layerLabels[key]);
+				try {
+					let l = cfn(marker);
+					let layer = md.overLayers[marker.type];
+					if (!layer) layer = md.overLayers[marker.type] = L.layerGroup();
+					layer.addLayer(l);
+				} catch (e) {
+					console.error("Error converting waypoint `" + marker.wayid + "`. ", e);
+					continue;
+				}
+			}
+			for (let type in md.overLayers) {
+				md.layerControl.addOverlay(md.overLayers[type], mapConfig.layerLabels[type]);
 			}
 		}
 		const MAP = L.map('mapPane', {
@@ -96,14 +110,14 @@ body { margin:0; }
 		
 		function switchToDimension(dimId) {
 			if (currentDim) {
-				MAP.removeControl(currentDim.controls);
+				MAP.removeControl(currentDim.layerControl);
 				currentDim.baseLayers.forEach(x=>MAP.removeLayers(x));
 				currentDim.overLayers.forEach(x=>MAP.removeLayers(x));
 			}
 			currentDim = mapData[dimId];
 			MAP.addLayer(currentDim.baseLayers[0]);
-			currentDim.overLayers.forEach(x=>MAP.addLayer(x));
-			MAP.addControl(currentDim.controls);
+			Object.values(currentDim.overLayers).forEach(x=>MAP.addLayer(x));
+			MAP.addControl(currentDim.layerControl);
 			MAP.setView(makeLatLong(currentDim.center), 0);
 		}
 		
