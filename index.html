@@ -1,7 +1,10 @@
 <html>
 <head>
 	<link rel="stylesheet" href="leaflet.css" type="text/css" />
+	<link rel="stylesheet" href="leaflet.extra-markers.min.css">
+	<link rel="stylesheet" href="font-awesome.min.css">
 	<script type="text/javascript" src="leaflet.js"></script>
+	<script type="text/javascript" src="leaflet.extra-markers.min.js"></script>
 	<style type="text/css">
 body { margin:0; }
 #mapPane { height:100%; }
@@ -30,11 +33,20 @@ img.leaflet-tile {
 		function makeBounds(o) {
 			return [[-o.t*512, o.l*512], [-(o.b+1)*512, (o.r+1)*512]];
 		}
+		let icons = {
+			poi:    L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-thumb-tack', markerColor:'blue', shape:'circle' }),
+			house:  L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-home', markerColor:'orange', shape:'penta' }),
+			center: L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-medkit', markerColor:'red', shape:'square' }),
+			gym:    L.ExtraMarkers.icon({ prefix:'fa', icon:'fa-dot-circle-o', markerColor:'green', shape:'star' }),
+		};
+		
+		
+		
 		let mapConfig = module.exports;
 		let mapData = {};
 		const overlayConverters = {
 			poi: (loc) => {
-				let opts = Object.assign({}, loc.opts || {});
+				let opts = Object.assign({ icon: icons.poi }, loc.opts || {});
 				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
 			},
 			town: (loc)=>{
@@ -52,15 +64,15 @@ img.leaflet-tile {
 				return L.polygon(points, opts).bindPopup(loc.name);
 			},
 			house: (loc)=>{
-				let opts = Object.assign({}, loc.opts || {});
+				let opts = Object.assign({ icon: icons.house }, loc.opts || {});
 				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
 			},
 			center: (loc)=>{
-				let opts = Object.assign({}, loc.opts || {});
+				let opts = Object.assign({ icon: icons.center }, loc.opts || {});
 				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
 			},
 			gym: (loc)=>{
-				let opts = Object.assign({}, loc.opts || {});
+				let opts = Object.assign({ icon: icons.gym  }, loc.opts || {});
 				return L.marker(makeLatLong(loc), opts).bindPopup(loc.name);
 			},
 			

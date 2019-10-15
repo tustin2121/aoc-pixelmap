@@ -114,7 +114,7 @@ module.exports = {
 				{
 					wayid: "Mudbray's Pass_63,72,244",
 					type: "route",
-					name: "Mudbray's Pass",
+					name: "Mudbray Pass",
 					path: [[61,218],[63,244],[83,249],[107,236],[128,235],[142,243],[173,198],[246,131],[303,122],[369,132],[409,122],[440,135]],
 					y: 72,
 				},
@@ -126,6 +126,12 @@ module.exports = {
 					x: 442,
 					y: 72,
 					z: 135,
+				},
+				{
+					wayid: "MAN_ForestPath",
+					type: "route",
+					name: "Forest Path",
+					path: [[441,132],[441,114],[444,88],[443,56],[451,48],[454,11],[454,-90],[442,-105],[416,-108]],
 				},
 				{
 					wayid: "Community Storehouse_30,63,169",
