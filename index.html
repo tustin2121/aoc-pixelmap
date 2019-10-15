@@ -2,8 +2,10 @@
 <head>
 	<link rel="stylesheet" href="leaflet.css" type="text/css" />
 	<link rel="stylesheet" href="leaflet.extra-markers.min.css">
+	<link rel="stylesheet" href="leaflet-geoman.css">
 	<link rel="stylesheet" href="font-awesome.min.css">
 	<script type="text/javascript" src="leaflet.js"></script>
+	<script type="text/javascript" src="leaflet-geoman.min.js"></script>
 	<script type="text/javascript" src="leaflet.extra-markers.min.js"></script>
 	<style type="text/css">
 body { margin:0; }
@@ -21,7 +23,8 @@ img.leaflet-tile {
 	<script type="text/javascript" src="data/config.js"></script>
 	<script type="text/javascript">
 		/*global L */
-				
+		L.PM.initialize({ optIn: true });
+		
 		function makeLatLong(x, z) {
 			//Lat/Long => -Y/X
 			if (z === undefined) {
@@ -130,8 +133,32 @@ img.leaflet-tile {
 			zoom: 0,
 			minZoom: -3,
 			maxZoom: 3,
+			pmIgnore: false,
 		});
 		MAP.maybeAddLayer = function(layer) { if (layer) this.addLayer(layer); }
+		MAP.pm.addControls({
+			position: 'topleft',
+			drawMarker: false,
+			drawCircleMarker: false,
+			drawPolyline: true,
+			drawRectangle: false,
+			drawPolygon: true,
+			drawCircle: false, //true, //broken?
+			editMode: false,
+			dragMode: false,
+			cutPolygon: false,
+			removalMode: false,
+		});
+		MAP.on('pm:create', (e)=>{
+			console.log(`Created marker: `, e);
+			if (e.shape === 'Polygon' || e.shape === 'Line') {
+				let points = [];
+				for (let c of e.layer._latlngs[0]) {
+					points.push([Math.floor(c.lng), Math.floor(-c.lat)]);
+				}
+				console.log(`Poly shape: ${JSON.stringify(points)}`);
+			}
+		});
 		let currentDim = null;
 		
 		function switchToDimension(dimId) {
