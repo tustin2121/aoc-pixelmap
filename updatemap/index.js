@@ -26,11 +26,21 @@ async function mergeImages(...srcs) {
  * @param {string} srcRoot - Root path of the images to update from.
  * @param {string} dstRoot - Root path of the images to update to.
  */
-async function updateImages(srcRoot, dstRoot) {
+async function updateImages(srcRoot, dstRoot, currDim) {
 	const dirList = fs.readdirSync(srcRoot);
 	for (const filename of dirList) {
 		let spath = PATH.join(srcRoot, filename);
 		let dpath = PATH.join(dstRoot, filename);
+		
+		filename.replace(/(-?\d+),(-?\d+).png/i, (match, x, y)=>{
+			x = Number.parseInt(x, 10);
+			y = Number.parseInt(y, 10);
+			currDim.bounds.l = Math.min(x, currDim.bounds.l);
+			currDim.bounds.r = Math.max(x, currDim.bounds.r);
+			currDim.bounds.t = Math.min(y, currDim.bounds.t);
+			currDim.bounds.b = Math.max(y, currDim.bounds.b);
+		});
+		
 		let dbuf, sbuf;
 		try {
 			dbuf = fs.readFileSync(dpath);
@@ -51,12 +61,19 @@ async function updateImages(srcRoot, dstRoot) {
 	}
 }
 
-async function scanDimension(srcRoot, dstRoot) {
+async function scanDimension(srcRoot, dstRoot, currDim) {
 	console.log(`Scanning dimension directory ${srcRoot}`);
 	const dirList = fs.readdirSync(srcRoot);
 	for (const filename of dirList) {
 		let spath = PATH.join(srcRoot, filename);
 		let dpath = PATH.join(dstRoot, filename);
+		
+		if (!Number.isNaN(Number.parseInt(filename, 10))) {
+			if (!currDim.layers.includes(filename)) {
+				currDim.layers.push(filename);
+			}
+		}
+		
 		try {
 			let dstat = fs.statSync(dpath);
 			if (!dstat.isDirectory()) throw new Error(`Destination is not a directory! ${dpath}`);
@@ -65,7 +82,7 @@ async function scanDimension(srcRoot, dstRoot) {
 				fs.mkdirSync(dpath);
 			} else throw e;
 		}
-		await updateImages(spath, dpath);
+		await updateImages(spath, dpath, currDim);
 	}
 }
 
@@ -111,8 +128,9 @@ async function scanDirectory(srcRoot, dstRoot) {
 						fs.mkdirSync(dpath);
 					} else throw e;
 				}
-				currentConfig.dimensions[filename] = currentConfig.dimensions[filename] || newDim(filename);
-				await scanDimension(spath, dpath);
+				let dim = currentConfig.dimensions[filename] = currentConfig.dimensions[filename] || newDim(filename);
+				dim.center = { l:0, r:0, t:0, b:0 };
+				await scanDimension(spath, dpath, dim);
 			}
 		}
 	}
@@ -121,7 +139,7 @@ async function scanDirectory(srcRoot, dstRoot) {
 function newDim(name) {
 	return {
 		name, bounds: [[0,0],[0,0]], center: { x:0, z:0 },
-		layers:["day", "night", "topo", "4", "3", "2", "1", "0"],
+		layers:["day", "night", "topo"],
 		markers: [
 			
 			// towns: [], gyms: [], centers: [],
@@ -224,6 +242,7 @@ function printJSON(obj, level=0, forceInline=false) {
 		let fi = false;
 		if (key) switch (key) {
 			case "bounds": case "layers": 
+			case "path": case "area":
 				fi = true; break;
 		}
 		switch(typeof val) {

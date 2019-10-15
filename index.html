@@ -27,6 +27,9 @@ img.leaflet-tile {
 			}
 			return [-z, x];
 		}
+		function makeBounds(o) {
+			return [[-o.t*512, o.l*512], [-(o.b+1)*512, (o.r+1)*512]];
+		}
 		let mapConfig = module.exports;
 		let mapData = {};
 		const overlayConverters = {
@@ -81,6 +84,7 @@ img.leaflet-tile {
 					maxNativeZoom: 0,
 					minNativeZoom: 0,
 					minZoom: -10,
+					bounds: makeBounds(dimData.bounds),
 				});
 				md.baseLayers.push(l);
 				md.layerControl.addBaseLayer(l, mapConfig.layerLabels[layer]);
@@ -110,19 +114,22 @@ img.leaflet-tile {
 			zoom: 0,
 			minZoom: -3,
 			maxZoom: 3,
-			// layers: [DEFMAP.baseLayers[0], ...DEFMAP.overLayers],
 		});
+		MAP.maybeAddLayer = function(layer) { if (layer) this.addLayer(layer); }
 		let currentDim = null;
 		
 		function switchToDimension(dimId) {
 			if (currentDim) {
 				MAP.removeControl(currentDim.layerControl);
-				currentDim.baseLayers.forEach(x=>MAP.removeLayers(x));
-				currentDim.overLayers.forEach(x=>MAP.removeLayers(x));
+				currentDim.baseLayers.forEach(x=>MAP.removeLayer(x));
+				Object.values(currentDim.overLayers).forEach(x=>MAP.removeLayer(x));
 			}
 			currentDim = mapData[dimId];
 			MAP.addLayer(currentDim.baseLayers[0]);
-			Object.values(currentDim.overLayers).forEach(x=>MAP.addLayer(x));
+			MAP.maybeAddLayer(currentDim.overLayers["town"]);
+			MAP.maybeAddLayer(currentDim.overLayers["route"]);
+			MAP.maybeAddLayer(currentDim.overLayers["area"]);
+			MAP.maybeAddLayer(currentDim.overLayers["poi"]);
 			MAP.addControl(currentDim.layerControl);
 			MAP.setView(makeLatLong(currentDim.center), 0);
 		}
