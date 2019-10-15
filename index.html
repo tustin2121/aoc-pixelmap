@@ -5,6 +5,11 @@
 	<style type="text/css">
 body { margin:0; }
 #mapPane { height:100%; }
+img.leaflet-tile {
+	image-rendering: pixelated;
+	image-rendering: -moz-crisp-edges;
+	image-rendering: crisp-edges;
+}
 	</style>
 </head>
 <body>
@@ -75,6 +80,7 @@ body { margin:0; }
 					tileSize: 512,
 					maxNativeZoom: 0,
 					minNativeZoom: 0,
+					minZoom: -10,
 				});
 				md.baseLayers.push(l);
 				md.layerControl.addBaseLayer(l, mapConfig.layerLabels[layer]);
@@ -102,8 +108,8 @@ body { margin:0; }
 			crs: L.CRS.Simple,
 			center: [0,0], 
 			zoom: 0,
-			minZoom: 0, //CAN go negative, according to the tutorial, but it seems to break if it does
-			maxZoom: 2,
+			minZoom: -3,
+			maxZoom: 3,
 			// layers: [DEFMAP.baseLayers[0], ...DEFMAP.overLayers],
 		});
 		let currentDim = null;
