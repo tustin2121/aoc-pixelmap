@@ -49,6 +49,7 @@ async function updateImages(srcRoot, dstRoot, currDim) {
 			if (e.code === 'ENOENT') {
 				// Copy the new file to the data directory
 				fs.copyFileSync(spath, dpath, fs.constants.COPYFILE_EXCL);
+				console.log("Copied", dpath);
 				continue; //next file!
 			} else throw e; //rethrow
 		}
@@ -129,7 +130,7 @@ async function scanDirectory(srcRoot, dstRoot) {
 					} else throw e;
 				}
 				let dim = currentConfig.dimensions[filename] = currentConfig.dimensions[filename] || newDim(filename);
-				dim.center = { l:0, r:0, t:0, b:0 };
+				dim.bounds = { l:0, r:0, t:0, b:0 };
 				await scanDimension(spath, dpath, dim);
 			}
 		}
@@ -138,7 +139,7 @@ async function scanDirectory(srcRoot, dstRoot) {
 
 function newDim(name) {
 	return {
-		name, bounds: [[0,0],[0,0]], center: { x:0, z:0 },
+		name, bounds: { l:0, r:0, t:0, b:0 }, center: { x:0, z:0 },
 		layers:["day", "night", "topo"],
 		markers: [
 			
@@ -157,7 +158,7 @@ async function updateConfig() {
 			let dim = currentConfig.dimensions[dimName];
 			let dimNum = Number.parseInt(dimName.slice(3), 10);
 			
-			console.log(`waypoint.dimensions.includes(Number(dimName)) => `, waypoint.dimensions, dimNum, waypoint.dimensions.includes(Number(dimName)));
+			// console.log(`waypoint.dimensions.includes(Number(dimName)) => `, waypoint.dimensions, dimNum, waypoint.dimensions.includes(Number(dimName)));
 			if (!waypoint.dimensions.includes(dimNum)) continue;
 			if (dim.markers.filter(x=>x.wayid === waypoint.id).length > 0) continue;
 			// If we got here, we haven't added this waypoint yet
