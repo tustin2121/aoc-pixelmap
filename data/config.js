@@ -523,6 +523,14 @@ module.exports = {
 					y: 64,
 					z: 101,
 				},
+				{
+					wayid: "MAN_RockGym",
+					type: "gym",
+					name: "Rock Gym",
+					x: -840,
+					y: 72,
+					z: 8070,
+				},
 			],
 		},
 		DIM72: {
@@ -637,7 +645,7 @@ module.exports = {
 				},
 				{
 					wayid: "Ultra Frost Gym_-1672,64,742",
-					type: "poi",
+					type: "gym",
 					name: "Ultra Frost Gym",
 					x: -1672,
 					y: 64,
@@ -658,6 +666,14 @@ module.exports = {
 					x: -2937,
 					y: 93,
 					z: 1617,
+				},
+				{
+					wayid: "MAN_Mesa",
+					type: "poi",
+					name: "US Mesa",
+					x: -2889,
+					y: 93,
+					z: -3211,
 				},
 			],
 		},
